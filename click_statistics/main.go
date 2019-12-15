@@ -1,50 +1,109 @@
 package main
 
 import (
+	"bytes"
+	"compress/gzip"
 	"context"
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+	"io/ioutil"
 	"net/http"
 	"time"
 )
 
 
-
-
-func  noop(c *gin.Context)  {
-}
-
-
-var dataChan chan InsertData
+var dataChan chan []interface {}
 var chanlen int = 1000000
 var mongodbconfig string = "mongodb://localhost:27017"
 var databaseconfig string = "mygood"
 var collectiontableconfig string = "mytest"
-
-type InsertData struct {
-	Name string
-	Age  int
-	City string
-}
+var httplisten string = ":84"
 
 
 func clickst (c *gin.Context){
-	test := InsertData{"test",10,c.Query("test") }
-	select {
-	case dataChan <- test:
-		//do sth
-	case <- time.After(100*time.Microsecond):
-		//to sth
+
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Printf("exception : %s\n", r)
+		}
+	}()
+
+	datalist := c.PostForm("data_list")
+	isgz := c.PostForm("gzip")
+
+	//datalist = "H4sIAAAAAAAA/5SQQU/zMAyG/4vzHavpC1tpl9vYhjhwhQtGVWitNSJLrMSsQlP/O0olxBWOfl/7eSS/XEE+mcCAJNu/QwWcIlMSRxnMFf559wYGeGSolqG7UMouBjCgV/r/qim5y52PJxc6N4CR9EFzBeLOBavrpm6267bV63YLFQwuiwu9LKuwu9sfjvf6Zr2pb5ulX3y/9Zb8TDLGwurjQN/hQGKdLwJmxAcRRtzHICl6Tykj7tghPmvEgxX70ygllEWpo0H0NtlTDIjTNCFGpmDLkf0bccUjK1VvYK6ALhQEDDxlSo/lXzC/fgEAAP//AQAA///+E178gQEAAA=="
+	//isgz = "1"
+
+	var jsonbyte []byte
+
+	if isgz == "1" {
+		decodeBytes, _ := base64.StdEncoding.DecodeString(datalist)
+		in := bytes.NewBuffer(decodeBytes)
+		//var out bytes.Buffer
+		ungz, err := gzip.NewReader(in)
+		if err==nil {
+			undatas, err1 := ioutil.ReadAll(ungz)
+			if err1 == nil {
+				//fmt.Println("ungzip size:", len(undatas))
+				//fmt.Println(string(undatas))
+				jsonbyte = undatas
+			}
+		}
+	} else {
+		jsonbyte = []byte(datalist)
 	}
-	fmt.Println("clickst ")
-	fmt.Println("=============>",len(dataChan))
+
+	//fmt.Println("----------->",string(jsonbyte))
+
+	var indata []interface {}
+	err2 := json.Unmarshal(jsonbyte, &indata)
+
+	//fmt.Println("=======------>",err2,indata)
+
+	if err2==nil {
+		select {
+		case dataChan <- indata:
+			//do sth
+		case <- time.After(5*time.Microsecond):
+			//to sth
+		}
+	}
+
+	//压缩
+	//oristr := c.PostForm("ori")
+	//var b bytes.Buffer
+	//gz := gzip.NewWriter(&b)
+	//if _, err := gz.Write([]byte(oristr)); err != nil {
+	//	panic(err)
+	//}
+	//if err := gz.Flush(); err != nil {
+	//	panic(err)
+	//}
+	//if err := gz.Close(); err != nil {
+	//	panic(err)
+	//}
+	//encodeString := base64.StdEncoding.EncodeToString(b.Bytes())
+	//fmt.Printf("====> %s \n",encodeString)
+
+	//
+	//select {
+	//case dataChan <- test:
+	//	//do sth
+	//case <- time.After(5*time.Microsecond):
+	//	//to sth
+	//}
+	//fmt.Println("clickst ")
+	//fmt.Println("=============>",len(dataChan))
 
 	c.String(http.StatusOK,"ok")
 }
 
 func stat (c *gin.Context){
+
 	numofchan := len(dataChan)
 	str := fmt.Sprintf("num fo chan : %d",numofchan)
 	//fmt.Println(str)
@@ -57,11 +116,11 @@ func main()  {
 
 	defer func() {
 		if r := recover(); r != nil {
-			fmt.Printf("捕获到的错误：%s\n", r)
+			fmt.Printf("exception : %s\n", r)
 		}
 	}()
 
-	dataChan = make(chan InsertData,chanlen)
+	dataChan = make(chan []interface {},chanlen)
 
 	go wmongo()
 
@@ -69,7 +128,7 @@ func main()  {
 	r.GET("/favicon.ico",noop )//注册接口
 	r.Any("/clickst",clickst )//注册接口
 	r.Any("/stat",stat )//注册接口
-	r.Run(":84") // listen and serve on 0.0.0.0:8080
+	r.Run(httplisten) // listen and serve on 0.0.0.0:8080
 }
 
 func wmongo() {
@@ -98,17 +157,22 @@ func wmongo() {
 			continue
 		}
 
-		//var insetRest *mongo.InsertOneResult
-		collection := client.Database(databaseconfig).Collection(collectiontableconfig)
-		//end 连接mongodb
-
 		for {
 			data := <-dataChan  //读chan
+
+
+			now  := time.Now()
+			collectionstr := fmt.Sprintf("%s-%d-%d-%d",collectiontableconfig,now.Year(),now.Month(),now.Day())
+			//collectionstr := fmt.Sprintf("%s-%d-%d-%d-%d-%d-%d",collectiontableconfig,now.Year(),now.Month(),now.Day(),now.Hour(),now.Minute(),now.Second())
+			//var insetRest *mongo.InsertOneResult
+			collection := client.Database(databaseconfig).Collection(collectionstr)
+			//end 连接mongodb
+
 			// if insetRest,err =
-			if _, err = collection.InsertOne(context.TODO(), &data); err != nil{
+			if _, err = collection.InsertMany(context.TODO(), data); err != nil{
 				fmt.Println("collection.InsertOne err:",err)
 				time.Sleep(1*time.Second)
-				break
+				continue
 			}
 			//id := insetRest.InsertedID
 			//fmt.Println("insert id :", id)
@@ -117,6 +181,12 @@ func wmongo() {
 
 }
 
+
+
+
+
+func  noop(c *gin.Context)  {
+}
 
 
 func getApi (c *gin.Context){
