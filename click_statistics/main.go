@@ -12,16 +12,18 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"io/ioutil"
 	"net/http"
+	"os"
+	"strconv"
 	"time"
 )
 
 
 var dataChan chan []interface {}
-var chanlen int = 1000000
-var mongodbconfig string = "mongodb://localhost:27017"
+var chanlen int = 2000000
+var mongodbconfig string = "localhost:27017"
+var httplisten string = ":84"
 var databaseconfig string = "mygood"
 var collectiontableconfig string = "mytest"
-var httplisten string = ":84"
 
 
 func clickst (c *gin.Context){
@@ -111,6 +113,27 @@ func stat (c *gin.Context){
 }
 
 func main()  {
+
+	if cset:=os.Getenv("SERVER_LISTEN"); cset!="" {
+		httplisten = cset
+	}
+	if cset:=os.Getenv("MONGODB_URL"); cset!="" {
+		mongodbconfig = cset
+	}
+	mongodbconfig = fmt.Sprintf( "%s%s", "mongodb://",mongodbconfig)
+	if cset:=os.Getenv("DATA_BUFFER_LEN"); cset!="" {
+		cset1,err := strconv.Atoi(cset)
+		if err==nil {
+			chanlen = cset1
+		}
+	}
+	if cset:=os.Getenv("MONGODB_DB"); cset!="" {
+		databaseconfig = cset
+	}
+	if cset:=os.Getenv("MONGODB_TABLE"); cset!="" {
+		collectiontableconfig = cset
+	}
+
 
 	gin.SetMode(gin.ReleaseMode)
 
