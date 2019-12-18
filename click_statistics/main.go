@@ -19,11 +19,11 @@ import (
 
 
 var dataChan chan []interface {}
-var chanlen int = 2000000
-var mongodbconfig string = "localhost:27017"
-var httplisten string = ":84"
-var databaseconfig string = "mygood"
-var collectiontableconfig string = "mytest"
+var chanlen int = 2000000  //CLICK_ST_DATA_BUFFER_LEN
+var mongodbconfig string = "localhost:27017"  //CLICK_ST_MONGODB_URL
+var httplisten string = ":84"  //CLICK_ST_SERVER_LISTEN
+var databaseconfig string = "mygood"  //CLICK_ST_MONGODB_DB
+var collectiontableconfig string = "mytest"  //CLICK_ST_MONGODB_TABLE
 
 
 func clickst (c *gin.Context){
@@ -114,23 +114,23 @@ func stat (c *gin.Context){
 
 func main()  {
 
-	if cset:=os.Getenv("SERVER_LISTEN"); cset!="" {
+	if cset:=os.Getenv("CLICK_ST_SERVER_LISTEN"); cset!="" {
 		httplisten = cset
 	}
-	if cset:=os.Getenv("MONGODB_URL"); cset!="" {
+	if cset:=os.Getenv("CLICK_ST_MONGODB_URL"); cset!="" {
 		mongodbconfig = cset
 	}
 	mongodbconfig = fmt.Sprintf( "%s%s", "mongodb://",mongodbconfig)
-	if cset:=os.Getenv("DATA_BUFFER_LEN"); cset!="" {
+	if cset:=os.Getenv("CLICK_ST_DATA_BUFFER_LEN"); cset!="" {
 		cset1,err := strconv.Atoi(cset)
 		if err==nil {
 			chanlen = cset1
 		}
 	}
-	if cset:=os.Getenv("MONGODB_DB"); cset!="" {
+	if cset:=os.Getenv("CLICK_ST_MONGODB_DB"); cset!="" {
 		databaseconfig = cset
 	}
-	if cset:=os.Getenv("MONGODB_TABLE"); cset!="" {
+	if cset:=os.Getenv("CLICK_ST_MONGODB_TABLE"); cset!="" {
 		collectiontableconfig = cset
 	}
 
