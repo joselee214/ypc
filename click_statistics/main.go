@@ -20,10 +20,10 @@ import (
 
 var dataChan chan []interface {}
 var chanlen int = 2000000  //CLICK_ST_DATA_BUFFER_LEN
-var mongodbconfig string = "localhost:27017"  //CLICK_ST_MONGODB_URL
-var httplisten string = ":84"  //CLICK_ST_SERVER_LISTEN
-var databaseconfig string = "mygood"  //CLICK_ST_MONGODB_DB
-var collectiontableconfig string = "mytest"  //CLICK_ST_MONGODB_TABLE
+var mongodbconfig string = "127.0.0.1:27017"  //CLICK_ST_MONGODB_URL
+var httplisten string = "84"  //CLICK_ST_SERVER_LISTEN
+var databaseconfig string = "clickst"  //CLICK_ST_MONGODB_DB
+var collectiontableconfig string = "click"  //CLICK_ST_MONGODB_TABLE
 
 
 func clickst (c *gin.Context){
@@ -117,6 +117,7 @@ func main()  {
 	if cset:=os.Getenv("CLICK_ST_SERVER_LISTEN"); cset!="" {
 		httplisten = cset
 	}
+	httplisten = fmt.Sprintf("%s%s",":",httplisten)
 	if cset:=os.Getenv("CLICK_ST_MONGODB_URL"); cset!="" {
 		mongodbconfig = cset
 	}
